@@ -1,7 +1,7 @@
 import { Inngest } from "inngest";
-import { connectDB } from "./db";
-import User from "../models/User";
-import { streamClient } from "./stream";
+import { connectDB } from "./db.js";
+import User from "../models/User.js";
+import { streamClient } from "./stream.js";
 
 export const inngest = new Inngest({ id: "interview_video" });
 
