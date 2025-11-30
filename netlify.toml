@@ -1,0 +1,9 @@
+[build]
+  command = "npm install && cd frontend && npm install && npm run build"
+  publish = "frontend/dist" # Or "frontend/build" depending on Vite vs Create React App
+
+[functions]
+  node_bundler = "esbuild" # Helps bundle your backend files correctly
+
+[[plugins]]
+  package = "netlify-plugin-inngest"
