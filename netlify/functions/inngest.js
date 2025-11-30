@@ -1,9 +1,8 @@
 import { serve } from "inngest/netlify";
-
-
-import { inngest, functions } from "../../backend/src/lib/functions"; 
+import { Inngest } from "inngest";
+import { functions } from "../../backend/src/lib/functions"; 
 
 export const handler = serve({
-  client: inngest,
+  client: Inngest,
   functions: functions,
 });

@@ -3,16 +3,19 @@
   publish = "frontend/dist"
 
 [functions]
-  node_bundler = "esbuild"
   directory = "netlify/functions"
+  node_bundler = "esbuild"
+  # ADD THIS LINE:
+  external_node_modules = ["express", "cors", "inngest", "mongoose", "serverless-http"]
 
-# Rule 1: Send Inngest traffic to the standalone Inngest function
+[[plugins]]
+  package = "netlify-plugin-inngest"
+
 [[redirects]]
   from = "/api/inngest"
   to = "/.netlify/functions/inngest"
   status = 200
 
-# Rule 2: Send ALL OTHER API traffic to your Express App (api.js)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"

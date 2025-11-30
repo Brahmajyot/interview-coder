@@ -23,7 +23,9 @@
     "netlify-plugin-inngest": "^1.0.1"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "express": "^5.1.0",
     "inngest": "^3.46.0",
     "mongoose": "^9.0.0",
     "serverless-http": "^4.0.0"
