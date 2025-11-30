@@ -1,9 +1,19 @@
 [build]
-  command = "npm install && cd frontend && npm install && npm run build"
-  publish = "frontend/dist" # Or "frontend/build" depending on Vite vs Create React App
+  command = "npm run build"
+  publish = "frontend/dist"
 
 [functions]
-  node_bundler = "esbuild" # Helps bundle your backend files correctly
+  node_bundler = "esbuild"
+  directory = "netlify/functions"
 
-[[plugins]]
-  package = "netlify-plugin-inngest"
+# Rule 1: Send Inngest traffic to the standalone Inngest function
+[[redirects]]
+  from = "/api/inngest"
+  to = "/.netlify/functions/inngest"
+  status = 200
+
+# Rule 2: Send ALL OTHER API traffic to your Express App (api.js)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200

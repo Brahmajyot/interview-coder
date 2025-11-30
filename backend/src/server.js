@@ -1,56 +1,17 @@
 import express from "express";
-import path from "path";
-import { ENV } from "./lib/env.js";
-import {connectDB} from "./lib/db.js";
-import{serve} from "inngest/express"
 import cors from "cors";
-import { functions, inngest } from "./lib/functions.js";
+import { connectDB } from "./lib/db.js";
+// import bookRoutes from "./routes/books"; // Your other routers
+
 const app = express();
-const port = ENV.PORT || 5000;
 
-//middware achi
-app.use(express.json())
-app.use(cors({origin:ENV.CLIENT_URL,credentials:true})) //server allow cookies 
+app.use(express.json());
+app.use(cors());
 
+// REMOVE THIS LINE: app.use("/api/inngest", serve(...)) 
+// Why? Because netlify/functions/inngest.js is already handling this!
 
-const __dirname = path.resolve();
+app.get("/", (req, res) => res.send("API is running"));
+// app.use("/api/books", bookRoutes); // Keep your other routes
 
-
-app.use("/api/inngest",serve({client:inngest,functions}))
-
-
-app.get("/", (req, res) => {
-  res.send("what is your name");
-});
-app.get("/books",(req,res) => {
-  res.send("bhai hogaya")
-})
-// app ka deploy karnay ka tareeqa
-if (ENV.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
-
-  app.get("*", (req,res)=>{
-    res.sendFile(path.join(__dirname,"../frontend", "dist", "index.html"))
-  })
-}
-
-
-
-
-
-
-  
-
-const startServer = async() =>
-{
-     await connectDB();
-     app.listen(port, () => {
-      console.log(`Server running on port: ${port}`)
-})
- }
-
-
-  startServer().catch((error) => {
-     console.error("Failed to start server:", error);
-    process.exit(1)
-  });
+export default app; // Export for serverless-http
