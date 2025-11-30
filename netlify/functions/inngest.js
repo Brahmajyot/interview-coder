@@ -1,8 +1,11 @@
-import { serve } from "inngest/netlify";
 import { Inngest } from "inngest";
-import { functions } from "../../backend/src/lib/functions"; 
+
+import { serve } from "inngest/lambda"; 
+import { functions } from "../../backend/src/lib/functions";
+
+const inngest = new Inngest({ id: "interview_video" });
 
 export const handler = serve({
-  client: Inngest,
+  client: inngest,
   functions: functions,
 });
