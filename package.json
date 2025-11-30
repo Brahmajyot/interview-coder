@@ -2,25 +2,22 @@
   "name": "interview_video",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-  "scripts": {
-    "build": "npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "npm run start --prefix backend"
+  "keywords": [],
+  "homepage": "https://github.com/Brahmajyot/interview-coder#readme",
+  "bugs": {
+    "url": "https://github.com/Brahmajyot/interview-coder/issues"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Brahmajyot/interview-coder.git"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
+  "author": "jyoti dev",
   "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/Brahmajyot/interview-coder/issues"
-  },
-  "homepage": "https://github.com/Brahmajyot/interview-coder#readme",
-  "devDependencies": {
-    "netlify-plugin-inngest": "^1.0.1"
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "build": "npm install --prefix frontend && npm run build --prefix frontend"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -31,4 +28,5 @@
     "serverless-http": "^4.0.0",
     "stream-chat": "^9.26.0"
   }
+  
 }
