@@ -28,6 +28,7 @@
     "express": "^5.1.0",
     "inngest": "^3.46.0",
     "mongoose": "^9.0.0",
-    "serverless-http": "^4.0.0"
+    "serverless-http": "^4.0.0",
+    "stream-chat": "^9.26.0"
   }
 }

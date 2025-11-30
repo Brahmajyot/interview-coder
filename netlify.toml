@@ -6,7 +6,7 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
   # ADD THIS LINE:
-  external_node_modules = ["express", "cors", "inngest", "mongoose", "serverless-http"]
+  external_node_modules = ["express", "cors", "inngest", "mongoose", "serverless-http", "stream-chat"]
 
 [[plugins]]
   package = "netlify-plugin-inngest"
