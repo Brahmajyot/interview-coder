@@ -19,11 +19,11 @@ export const useStreamClient = () => {
     const connectUser = async () => {
       try {
         // 3. Ask your Netlify Function for a token
-        const response = await fetch(`${import.meta.env.VITE_CLIENT_URL}/api/token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id }),
-        });
+        const response = await fetch(`/api/token`, { 
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.id }),
+});
 
         const { token } = await response.json();
 
