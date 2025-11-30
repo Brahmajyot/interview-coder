@@ -1,38 +1,52 @@
 import { StreamChat } from "stream-chat";
 
-// Initialize Stream (Use your same keys)
+// Initialize Stream
 const serverClient = StreamChat.getInstance(
   process.env.STREAM_API_KEY,
   process.env.STREAM_API_SECRET
 );
 
 export const handler = async (event, context) => {
-  // 1. Security Check: Ensure the user is logged in via Clerk
-  // Note: specific implementation depends on how you pass the Clerk session
-  // For a simple start, we will assume the User ID is passed in the body (less secure)
-  // OR strictly parse the Clerk session (more secure, requires Clerk middleware)
-  
+  // 1. Only allow POST
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+    return { 
+      statusCode: 405, 
+      body: JSON.stringify({ error: "Method Not Allowed" }) 
+    };
   }
 
   try {
+    // 2. Parse Body
+    if (!event.body) {
+       return { 
+         statusCode: 400, 
+         body: JSON.stringify({ error: "Missing request body" }) 
+       };
+    }
+
     const { userId } = JSON.parse(event.body);
 
     if (!userId) {
-      return { statusCode: 400, body: "User ID is missing" };
+      return { 
+        statusCode: 400, 
+        body: JSON.stringify({ error: "User ID is missing" }) 
+      };
     }
 
-    // 2. Generate the Token
-    // This token allows the frontend to connect as this user for 1 hour
+    // 3. Generate Token
     const token = serverClient.createToken(userId);
 
-    // 3. Send it back
+    // 4. Success Response
     return {
       statusCode: 200,
       body: JSON.stringify({ token, userId }),
     };
+
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    console.error("Token Error:", error);
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ error: error.message }) 
+    };
   }
 };
