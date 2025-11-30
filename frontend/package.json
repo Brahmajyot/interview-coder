@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.57.0",
+    "@monaco-editor/react": "^4.7.0",
     "@stream-io/video-react-sdk": "^1.27.2",
     "@tailwindcss/vite": "^4.1.17",
     "lucide-react": "^0.555.0",
