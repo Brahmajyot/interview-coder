@@ -2,15 +2,21 @@ import express from "express";
 import path from "path";
 import { ENV } from "./lib/env.js";
 import {connectDB} from "./lib/db.js";
+import{serve} from "inngest/express"
+import cors from "cors";
+import { functions, inngest } from "./lib/functions.js";
 const app = express();
 const port = ENV.PORT || 5000;
 
-
-
+//middware achi
+app.use(express.json())
+app.use(cors({origin:ENV.CLIENT_URL,credentials:true})) //server allow cookies 
 
 
 const __dirname = path.resolve();
 
+
+app.use("/api/inngest",serve({client:inngest,functions}))
 
 
 app.get("/", (req, res) => {
@@ -21,10 +27,10 @@ app.get("/books",(req,res) => {
 })
 // app ka deploy karnay ka tareeqa
 if (ENV.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../fronted/dist")));
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
   app.get("*", (req,res)=>{
-    res.sendFile(path.join(__dirname,"../fronted", "dist", "index.html"))
+    res.sendFile(path.join(__dirname,"../frontend", "dist", "index.html"))
   })
 }
 
