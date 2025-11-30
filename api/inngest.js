@@ -1,11 +1,11 @@
 import { Inngest } from "inngest";
-import { serve } from "inngest/node"; // ⚠️ Must use 'node', not 'netlify' or 'lambda'
+import { serve } from "inngest/node"; // ⚠️ Must use 'node' adapter for Vercel
 import { functions } from "../backend/src/lib/functions.js";
 
 const inngest = new Inngest({ id: "interview_video" });
 
-// ✅ CRITICAL FOR VERCEL
-// This disables Vercel's default body parsing so Inngest can read the event stream
+// ⚠️ CRITICAL VERCEL CONFIGURATION
+// This tells Vercel: "Don't parse the JSON body. Give Inngest the raw stream."
 export const config = {
   api: {
     bodyParser: false,
