@@ -1,13 +1,14 @@
 import { Inngest } from "inngest";
-import { serve } from "inngest/node"; // Correct adapter
+// 1. CHANGE THIS LINE: Use 'lambda' instead of 'node'
+import { serve } from "inngest/lambda"; 
 import { functions } from "../backend/src/lib/functions.js";
 
 const inngest = new Inngest({ id: "interview_video" });
 
-// ✅ THIS IS THE MOST IMPORTANT PART FOR VERCEL
+// 2. Keep the config to disable parsing
 export const config = {
   api: {
-    bodyParser: false, // Disables Vercel's auto-parsing so Inngest receives the stream
+    bodyParser: false,
   },
 };
 
