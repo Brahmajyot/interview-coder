@@ -1,49 +1,40 @@
 import { StreamChat } from "stream-chat";
-import { ENV } from "../backend/src/lib/env.js";   
+import { ENV } from "../backend/src/lib/env.js";
+
 
 export default async function handler(req, res) {
- 
+  // CORS Setup
   const allowedOrigin = ENV.CLIENT_URL || "*";
-  
   res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
+  if (req.method === "OPTIONS") return res.status(200).end();
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  // DEBUGGING LOGS (Check Vercel Logs after running this)
+  console.log("DEBUG: Connecting to Stream...");
+  console.log("DEBUG: API Key exists?", !!ENV.STREAM_API_KEY);
+  console.log("DEBUG: Secret exists?", !!ENV.STREAM_API_SECRET);
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
-  }
-
-  //  Initialize Stream
   const apiKey = ENV.STREAM_API_KEY;
   const apiSecret = ENV.STREAM_API_SECRET;
 
   if (!apiKey || !apiSecret) {
-    return res.status(500).json({ error: "Server missing Stream API Keys" });
+    console.error("CRITICAL: Stream Keys are MISSING in Vercel!");
+    return res.status(500).json({ error: "Server Keys Missing" });
   }
 
-  const serverClient = StreamChat.getInstance(apiKey, apiSecret);
-
   try {
-    // 4. Parse Body
+    const serverClient = StreamChat.getInstance(apiKey, apiSecret);
     const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "User ID missing" });
 
-    if (!userId) {
-      return res.status(400).json({ error: "User ID is missing" });
-    }
-
-    // 5. Generate Token
     const token = serverClient.createToken(userId);
-
-    // 6. Return Success
+    console.log("DEBUG: Token generated successfully");
+    
     return res.status(200).json({ token, userId });
-
   } catch (error) {
-    console.error("Token Generation Error:", error);
+    console.error("DEBUG: Crash Error:", error);
     return res.status(500).json({ error: error.message });
   }
 }
