@@ -24,7 +24,7 @@ export const StreamVideoProvider = ({ children }) => {
 
       if (!token) return;
 
-      // Initialize the Video Client
+      
       const client = new StreamVideoClient({
         apiKey,
         user: {

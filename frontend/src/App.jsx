@@ -11,7 +11,7 @@ function App() {
     <Router>
       <div className="min-h-screen flex flex-col bg-gray-950 text-white font-sans selection:bg-emerald-500/30">
         
-        {/* --- NAVBAR --- */}
+       
         <header className="flex justify-between items-center px-6 py-4 border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-50">
           <div className="flex items-center gap-2">
           
@@ -48,7 +48,7 @@ function App() {
            
             <Route path="/" element={
               <>
-                {/* Show Public Landing Page */}
+              
                 <SignedOut>
                   <div className="grow flex flex-col items-center justify-center text-center px-6 py-12 relative overflow-hidden">
                   
@@ -83,7 +83,7 @@ function App() {
               </>
             } />
 
-            {/* 2. MEETING ROOM ROUTE */}
+            
             <Route path="/meeting/:id" element={
               <SignedIn>
                 <StreamVideoProvider>
@@ -98,7 +98,7 @@ function App() {
           </Routes>
         </main>
 
-        {/* --- FOOTER--- */}
+      
         <footer className="py-6 text-center text-gray-600 text-sm border-t border-gray-900 bg-gray-950">
           <p>© {new Date().getFullYear()} Interview Coder. Built with Jyoti Dev ❤️.</p>
         </footer>

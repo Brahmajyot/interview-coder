@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { StreamChat } from 'stream-chat';
 import { useUser } from '@clerk/clerk-react';
 
-// Use your PUBLIC Key here (It's safe to expose in frontend)
+
 const apiKey = import.meta.env.VITE_STREAM_API_KEY;
 
 export const useStreamClient = () => {
@@ -10,15 +10,15 @@ export const useStreamClient = () => {
   const [client, setClient] = useState(null);
 
   useEffect(() => {
-    // 1. Wait for Clerk to load the user
+    
     if (!isLoaded || !user || !apiKey) return;
 
-    // 2. Initialize the client
+   
     const chatClient = StreamChat.getInstance(apiKey);
 
     const connectUser = async () => {
       try {
-        // 3. Ask your Netlify Function for a token
+        
         const response = await fetch(`/api/token`, { 
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -29,7 +29,6 @@ export const useStreamClient = () => {
 
         if (!token) throw new Error("Failed to get token");
 
-        // 4. Connect the User to Stream
         await chatClient.connectUser(
           {
             id: user.id,
@@ -47,7 +46,7 @@ export const useStreamClient = () => {
 
     connectUser();
 
-    // Cleanup when component unmounts or user logs out
+    
     return () => {
       chatClient.disconnectUser();
       setClient(null);

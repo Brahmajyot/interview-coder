@@ -33,7 +33,7 @@ export default function Home() {
           Everything you need to ace the technical round.
         </p>
 
-        {/* Feature Grid */}
+     
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-12">
             <div className="p-6 bg-gray-900 border border-gray-800 rounded-xl hover:border-emerald-500/50 transition-all">
                 <Video className="w-10 h-10 text-emerald-500 mb-4 mx-auto" />
@@ -52,7 +52,6 @@ export default function Home() {
             </div>
         </div>
 
-        {/* Action Button */}
         <button 
           onClick={startMeeting}
           disabled={loading}

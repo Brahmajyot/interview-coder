@@ -3,7 +3,7 @@ import { ENV } from "../backend/src/lib/env.js";
 
 
 export default async function handler(req, res) {
-  // CORS Setup
+ 
   const allowedOrigin = ENV.CLIENT_URL || "*";
   res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -11,7 +11,6 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // DEBUGGING LOGS (Check Vercel Logs after running this)
   console.log("DEBUG: Connecting to Stream...");
   console.log("DEBUG: API Key exists?", !!ENV.STREAM_API_KEY);
   console.log("DEBUG: Secret exists?", !!ENV.STREAM_API_SECRET);

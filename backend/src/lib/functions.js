@@ -5,7 +5,7 @@ import { streamClient } from "./stream.js";
 
 export const inngest = new Inngest({ id: "interview_video" });
 
-//Create/Update
+
 const syncUser = inngest.createFunction(
   { id: "sync-user" },
   { event: "clerk/user.created" },
@@ -13,7 +13,7 @@ const syncUser = inngest.createFunction(
     await connectDB();
     const { id, email_addresses, first_name, last_name, image_url } = event.data;
 
-    // 1. Prepare the user data
+    
     const userData = {
       clerkId: id,
       email: email_addresses[0]?.email_address,
@@ -21,14 +21,13 @@ const syncUser = inngest.createFunction(
       profileImage: image_url,
     };
 
-    // 2. Save to MongoDB 
     await User.findOneAndUpdate(
       { clerkId: id },
       userData,
       { upsert: true, new: true }
     );
 
-    // 3. Save to GetStream
+   
     await streamClient.upsertUser({
       id: id,
       name: userData.name,
@@ -38,7 +37,7 @@ const syncUser = inngest.createFunction(
   }
 );
 
-//  DELETE USER 
+
 const deletUserFromDB = inngest.createFunction(
   { id: "delete-user-from-db" },
   { event: "clerk/user.deleted" },
@@ -46,10 +45,9 @@ const deletUserFromDB = inngest.createFunction(
     await connectDB();
     const { id } = event.data;
 
-    // 1. Delete from MongoDB
+    
     await User.deleteOne({ clerkId: id });
 
-    // 2. Delete from GetStream 
     await streamClient.deleteUser(id);
   }
 );

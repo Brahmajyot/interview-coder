@@ -1,7 +1,5 @@
 import Interview from "../models/Interview.js";
 
-// @desc    Save a new interview snippet
-// @route   POST /api/interviews
 export const saveInterview = async (req, res) => {
   try {
     const { userId, language, code, title } = req.body;
@@ -24,8 +22,7 @@ export const saveInterview = async (req, res) => {
   }
 };
 
-// @desc    Get all interviews for a user
-// @route   GET /api/interviews/:userId
+
 export const getUserInterviews = async (req, res) => {
   try {
     const { userId } = req.params;
