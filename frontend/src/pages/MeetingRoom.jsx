@@ -1,38 +1,34 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom"; 
 import {
   CallControls,
   CallingState,
   SpeakerLayout,
+  useCallStateHooks,
   useStreamVideoClient,
   StreamTheme,
-  StreamCall, 
+  StreamCall,
 } from "@stream-io/video-react-sdk";
 import Editor from "@monaco-editor/react";
 import { executeCode, CODE_SNIPPETS } from "../api/codeExecution";
-import { Loader2, Play, Terminal, Code2, Save } from "lucide-react";
+import { Loader2, Play, Terminal, Code2, Save, MonitorUp } from "lucide-react"; // Added MonitorUp
 import { useUser } from "@clerk/clerk-react";
 
 export default function MeetingRoom() {
   const { id } = useParams();
   const { user } = useUser();
+  const navigate = useNavigate(); // For leaving the call
   
-  // State
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState(CODE_SNIPPETS["javascript"]);
   const [output, setOutput] = useState("// Output will appear here...");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Stream Video Logic
   const client = useStreamVideoClient();
   const [call, setCall] = useState(null);
-  // Removed useCallCallingState here because it must be inside StreamCall
-  
-  // Ref to ignore our own updates during sync to prevent loops
   const isRemoteUpdate = useRef(false);
 
-  // 1. JOIN CALL EFFECT
   useEffect(() => {
     if (!client || !user) return;
     
@@ -45,15 +41,12 @@ export default function MeetingRoom() {
     };
   }, [client, id, user]);
 
-  // 2. REAL-TIME CODE SYNC EFFECT
   useEffect(() => {
     if (!call) return;
-
     const unsubscribe = call.on("custom", (event) => {
       if (event.type === "code_update") {
         const newCode = event.custom.code;
         const newLang = event.custom.language;
-
         if (newCode !== code) {
           isRemoteUpdate.current = true; 
           setCode(newCode);
@@ -61,21 +54,15 @@ export default function MeetingRoom() {
         }
       }
     });
-
     return () => unsubscribe();
   }, [call, code]);
 
-  // 3. BROADCAST CHANGES
   const handleCodeChange = (value) => {
     setCode(value);
-
     if (!isRemoteUpdate.current && call) {
       call.sendCustomEvent({
         type: "code_update",
-        custom: {
-          code: value,
-          language: language
-        },
+        custom: { code: value, language: language },
       });
     }
     isRemoteUpdate.current = false; 
@@ -86,19 +73,14 @@ export default function MeetingRoom() {
     setLanguage(newLang);
     const newCode = CODE_SNIPPETS[newLang];
     setCode(newCode);
-
     if (call) {
       call.sendCustomEvent({
         type: "code_update",
-        custom: {
-          code: newCode,
-          language: newLang
-        },
+        custom: { code: newCode, language: newLang },
       });
     }
   };
 
-  // 4. RUN CODE
   const runCode = async () => {
     setIsLoading(true);
     try {
@@ -111,7 +93,6 @@ export default function MeetingRoom() {
     }
   };
 
-  // 5. SAVE TO DATABASE 
   const saveInterview = async () => {
     if (!user) return;
     setIsSaving(true);
@@ -126,12 +107,8 @@ export default function MeetingRoom() {
           title: `Interview - ${new Date().toLocaleString()}`
         }),
       });
-
-      if (response.ok) {
-        alert("✅ Code saved to your dashboard!");
-      } else {
-        alert("❌ Failed to save code.");
-      }
+      if (response.ok) alert("✅ Code saved!");
+      else alert("❌ Failed to save.");
     } catch (error) {
       console.error(error);
       alert("❌ Error saving code.");
@@ -140,7 +117,6 @@ export default function MeetingRoom() {
     }
   };
 
-  // 6. LOADING STATE UI
   if (!call) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-gray-950 text-white">
@@ -150,10 +126,8 @@ export default function MeetingRoom() {
     );
   }
 
-  // 7. MAIN UI
   return (
     <StreamTheme>
-      {/* 2. WRAP WITH STREAMCALL */}
       <StreamCall call={call}>
         <div className="h-screen w-full bg-gray-950 flex flex-col md:flex-row overflow-hidden">
           
@@ -162,15 +136,27 @@ export default function MeetingRoom() {
               <div className="flex-1 bg-gray-900 relative">
                   <SpeakerLayout participantsBarPosition="bottom" />
               </div>
-              <div className="bg-gray-950 p-4 flex justify-center border-t border-gray-800">
-                  <CallControls />
+              
+              {/* Custom Video Controls Bar */}
+              <div className="bg-gray-950 p-4 flex items-center justify-center gap-4 border-t border-gray-800">
+                  
+                  {/* The Default Controls (Mic, Cam, Leave) */}
+                  <CallControls onLeave={() => navigate('/')} />
+
+                  {/* Your Custom Screen Share Button */}
+                  <button 
+                    onClick={() => call.screenShare.toggle()}
+                    className="p-3 rounded-full bg-gray-800 hover:bg-gray-700 text-white transition-colors"
+                    title="Share Screen"
+                  >
+                    <MonitorUp className="h-5 w-5" />
+                  </button>
+
               </div>
           </div>
 
           {/* --- RIGHT SIDE: CODE EDITOR --- */}
           <div className="flex-1 flex flex-col bg-gray-900 h-full">
-            
-            {/* Toolbar */}
             <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 md:px-6 shadow-md">
               <div className="flex items-center gap-3">
                   <Code2 className="h-5 w-5 text-emerald-500" />
@@ -183,32 +169,17 @@ export default function MeetingRoom() {
                   <option value="python">Python</option>
                   </select>
               </div>
-
               <div className="flex gap-2">
-                <button
-                  onClick={saveInterview}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-white transition-all border border-gray-600"
-                >
+                <button onClick={saveInterview} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-white transition-all border border-gray-600">
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-gray-300" />}
                   {isSaving ? "Saving..." : "Save"}
                 </button>
-
-                <button
-                  onClick={runCode}
-                  disabled={isLoading}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all shadow-lg ${
-                    isLoading 
-                      ? "bg-gray-600 text-gray-300 cursor-not-allowed" 
-                      : "bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/20 hover:scale-105"
-                  }`}
-                >
+                <button onClick={runCode} disabled={isLoading} className="flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/20 hover:scale-105 transition-all shadow-lg">
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
                   {isLoading ? "Running..." : "Run"}
                 </button>
               </div>
             </div>
-
             <div className="grow relative">
               <Editor
                 height="100%"
@@ -225,7 +196,6 @@ export default function MeetingRoom() {
                 }}
               />
             </div>
-
             <div className="h-1/3 min-h-[150px] bg-black border-t border-gray-800 flex flex-col">
               <div className="flex items-center gap-2 px-4 py-2 bg-gray-900 border-b border-gray-800">
                   <Terminal className="h-4 w-4 text-emerald-500" />
