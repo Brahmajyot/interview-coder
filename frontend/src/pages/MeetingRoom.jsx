@@ -4,9 +4,9 @@ import {
   CallControls,
   CallingState,
   SpeakerLayout,
-  useCallStateHooks,
   useStreamVideoClient,
   StreamTheme,
+  StreamCall, 
 } from "@stream-io/video-react-sdk";
 import Editor from "@monaco-editor/react";
 import { executeCode, CODE_SNIPPETS } from "../api/codeExecution";
@@ -27,9 +27,8 @@ export default function MeetingRoom() {
   // Stream Video Logic
   const client = useStreamVideoClient();
   const [call, setCall] = useState(null);
-  const { useCallCallingState } = useCallStateHooks();
-  const callingState = useCallCallingState();
-
+  // Removed useCallCallingState here because it must be inside StreamCall
+  
   // Ref to ignore our own updates during sync to prevent loops
   const isRemoteUpdate = useRef(false);
 
@@ -141,7 +140,8 @@ export default function MeetingRoom() {
     }
   };
 
-  if (callingState !== CallingState.JOINED) {
+  // 6. LOADING STATE UI
+  if (!call) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-gray-950 text-white">
         <Loader2 className="animate-spin h-10 w-10 text-emerald-500" />
@@ -150,94 +150,96 @@ export default function MeetingRoom() {
     );
   }
 
+  // 7. MAIN UI
   return (
     <StreamTheme>
-      <div className="h-screen w-full bg-gray-950 flex flex-col md:flex-row overflow-hidden">
-        
-        {/* --- LEFT SIDE: VIDEO CALL --- */}
-        <div className="flex-1 flex flex-col relative border-r border-gray-800 min-h-[300px] md:min-h-auto">
-            <div className="flex-1 bg-gray-900 relative">
-                <SpeakerLayout participantsBarPosition="bottom" />
-            </div>
-            <div className="bg-gray-950 p-4 flex justify-center border-t border-gray-800">
-                <CallControls />
-            </div>
-        </div>
-
-        {/* --- RIGHT SIDE: CODE EDITOR --- */}
-        <div className="flex-1 flex flex-col bg-gray-900 h-full">
+      {/* 2. WRAP WITH STREAMCALL */}
+      <StreamCall call={call}>
+        <div className="h-screen w-full bg-gray-950 flex flex-col md:flex-row overflow-hidden">
           
-          {/* Toolbar */}
-          <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 md:px-6 shadow-md">
-            <div className="flex items-center gap-3">
-                <Code2 className="h-5 w-5 text-emerald-500" />
-                <select
-                value={language}
-                onChange={handleLanguageChange}
-                className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded-md outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-600 hover:bg-gray-600 cursor-pointer"
+          {/* --- LEFT SIDE: VIDEO CALL --- */}
+          <div className="flex-1 flex flex-col relative border-r border-gray-800 min-h-[300px] md:min-h-auto">
+              <div className="flex-1 bg-gray-900 relative">
+                  <SpeakerLayout participantsBarPosition="bottom" />
+              </div>
+              <div className="bg-gray-950 p-4 flex justify-center border-t border-gray-800">
+                  <CallControls />
+              </div>
+          </div>
+
+          {/* --- RIGHT SIDE: CODE EDITOR --- */}
+          <div className="flex-1 flex flex-col bg-gray-900 h-full">
+            
+            {/* Toolbar */}
+            <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 md:px-6 shadow-md">
+              <div className="flex items-center gap-3">
+                  <Code2 className="h-5 w-5 text-emerald-500" />
+                  <select
+                  value={language}
+                  onChange={handleLanguageChange}
+                  className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded-md outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-600 hover:bg-gray-600 cursor-pointer"
+                  >
+                  <option value="javascript">JavaScript</option>
+                  <option value="python">Python</option>
+                  </select>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={saveInterview}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-white transition-all border border-gray-600"
                 >
-                <option value="javascript">JavaScript</option>
-                <option value="python">Python</option>
-                </select>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-gray-300" />}
+                  {isSaving ? "Saving..." : "Save"}
+                </button>
+
+                <button
+                  onClick={runCode}
+                  disabled={isLoading}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all shadow-lg ${
+                    isLoading 
+                      ? "bg-gray-600 text-gray-300 cursor-not-allowed" 
+                      : "bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/20 hover:scale-105"
+                  }`}
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                  {isLoading ? "Running..." : "Run"}
+                </button>
+              </div>
             </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={saveInterview}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-white transition-all border border-gray-600"
-              >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-gray-300" />}
-                {isSaving ? "Saving..." : "Save"}
-              </button>
-
-              <button
-                onClick={runCode}
-                disabled={isLoading}
-                // ✅ FIXED: Changed bg-linear-to-r to bg-gradient-to-r
-                className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all shadow-lg ${
-                  isLoading 
-                    ? "bg-gray-600 text-gray-300 cursor-not-allowed" 
-                    : "bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/20 hover:scale-105"
-                }`}
-              >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-                {isLoading ? "Running..." : "Run"}
-              </button>
+            <div className="grow relative">
+              <Editor
+                height="100%"
+                theme="vs-dark"
+                language={language}
+                value={code}
+                onChange={handleCodeChange}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  automaticLayout: true,
+                  padding: { top: 16 },
+                  scrollBeyondLastLine: false,
+                }}
+              />
             </div>
-          </div>
 
-          <div className="grow relative">
-            <Editor
-              height="100%"
-              theme="vs-dark"
-              language={language}
-              value={code}
-              onChange={handleCodeChange}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                automaticLayout: true,
-                padding: { top: 16 },
-                scrollBeyondLastLine: false,
-              }}
-            />
-          </div>
-
-          <div className="h-1/3 min-h-[150px] bg-black border-t border-gray-800 flex flex-col">
-            <div className="flex items-center gap-2 px-4 py-2 bg-gray-900 border-b border-gray-800">
-                <Terminal className="h-4 w-4 text-emerald-500" />
-                <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">Console Output</span>
-            </div>
-            <div className="flex-1 p-4 overflow-auto font-mono text-sm">
-                {/* ✅ FIXED: break-words handles wrapping better than wrap-break-word */}
-                <pre className={`${output.startsWith("Error") ? "text-red-400" : "text-emerald-400"} whitespace-pre-wrap break-words`}>
-                  {output}
-                </pre>
+            <div className="h-1/3 min-h-[150px] bg-black border-t border-gray-800 flex flex-col">
+              <div className="flex items-center gap-2 px-4 py-2 bg-gray-900 border-b border-gray-800">
+                  <Terminal className="h-4 w-4 text-emerald-500" />
+                  <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">Console Output</span>
+              </div>
+              <div className="flex-1 p-4 overflow-auto font-mono text-sm">
+                  <pre className={`${output.startsWith("Error") ? "text-red-400" : "text-emerald-400"} whitespace-pre-wrap break-words`}>
+                    {output}
+                  </pre>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </StreamCall>
     </StreamTheme>
   );
 }
