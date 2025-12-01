@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { ENV } from "./env";
 
 // Try both common variable names
-const MONGODB_URL = ENV.MONGODB_URL || ENV.DB_URL;
+const MONGODB_URL = ENV.DB_URL;
 
 if (!MONGODB_URL) {
   throw new Error("❌ MongoDB URL missing! Add MONGODB_URI to Vercel Env Vars.");
