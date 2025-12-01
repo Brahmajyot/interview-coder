@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
 import { StreamVideoProvider } from './components/StreamVideoProvider';
-
+import '@stream-io/video-react-sdk/dist/css/styles.css'; 
 
 import Home from './pages/Home';
 import MeetingRoom from './pages/MeetingRoom';
