@@ -15,14 +15,14 @@ import { useUser } from "@clerk/clerk-react";
 
 export default function MeetingRoom() {
   const { id } = useParams();
-  const { user } = useUser(); // Get authenticated user 
+  const { user } = useUser();
   
   // State
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState(CODE_SNIPPETS["javascript"]);
   const [output, setOutput] = useState("// Output will appear here...");
-  const [isLoading, setIsLoading] = useState(false); // For Run Code
-  const [isSaving, setIsSaving] = useState(false);   // For Save to DB
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Stream Video Logic
   const client = useStreamVideoClient();
@@ -70,7 +70,6 @@ export default function MeetingRoom() {
   const handleCodeChange = (value) => {
     setCode(value);
 
-    // Only broadcast if I typed it (not if I received it)
     if (!isRemoteUpdate.current && call) {
       call.sendCustomEvent({
         type: "code_update",
@@ -89,7 +88,6 @@ export default function MeetingRoom() {
     const newCode = CODE_SNIPPETS[newLang];
     setCode(newCode);
 
-    // Broadcast language switch
     if (call) {
       call.sendCustomEvent({
         type: "code_update",
@@ -101,7 +99,7 @@ export default function MeetingRoom() {
     }
   };
 
-  // 4. RUN CODE (Piston API)
+  // 4. RUN CODE
   const runCode = async () => {
     setIsLoading(true);
     try {
@@ -143,7 +141,6 @@ export default function MeetingRoom() {
     }
   };
 
-  // 6. LOADING STATE UI
   if (callingState !== CallingState.JOINED) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-gray-950 text-white">
@@ -153,7 +150,6 @@ export default function MeetingRoom() {
     );
   }
 
-  // 7. MAIN UI
   return (
     <StreamTheme>
       <div className="h-screen w-full bg-gray-950 flex flex-col md:flex-row overflow-hidden">
@@ -173,8 +169,6 @@ export default function MeetingRoom() {
           
           {/* Toolbar */}
           <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 md:px-6 shadow-md">
-            
-            {/* Language Selector */}
             <div className="flex items-center gap-3">
                 <Code2 className="h-5 w-5 text-emerald-500" />
                 <select
@@ -187,9 +181,7 @@ export default function MeetingRoom() {
                 </select>
             </div>
 
-            {/* Buttons Group */}
             <div className="flex gap-2">
-              {/* SAVE BUTTON */}
               <button
                 onClick={saveInterview}
                 disabled={isSaving}
@@ -199,14 +191,14 @@ export default function MeetingRoom() {
                 {isSaving ? "Saving..." : "Save"}
               </button>
 
-              {/* RUN BUTTON */}
               <button
                 onClick={runCode}
                 disabled={isLoading}
+                // ✅ FIXED: Changed bg-linear-to-r to bg-gradient-to-r
                 className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all shadow-lg ${
                   isLoading 
                     ? "bg-gray-600 text-gray-300 cursor-not-allowed" 
-                    : "bg-linear-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/20 hover:scale-105"
+                    : "bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/20 hover:scale-105"
                 }`}
               >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
@@ -215,7 +207,6 @@ export default function MeetingRoom() {
             </div>
           </div>
 
-          {/* Monaco Editor */}
           <div className="grow relative">
             <Editor
               height="100%"
@@ -233,14 +224,14 @@ export default function MeetingRoom() {
             />
           </div>
 
-          {/* Output Console */}
           <div className="h-1/3 min-h-[150px] bg-black border-t border-gray-800 flex flex-col">
             <div className="flex items-center gap-2 px-4 py-2 bg-gray-900 border-b border-gray-800">
                 <Terminal className="h-4 w-4 text-emerald-500" />
                 <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">Console Output</span>
             </div>
             <div className="flex-1 p-4 overflow-auto font-mono text-sm">
-                <pre className={`${output.startsWith("Error") ? "text-red-400" : "text-emerald-400"} whitespace-pre-wrap wrap-break-word`}>
+                {/* ✅ FIXED: break-words handles wrapping better than wrap-break-word */}
+                <pre className={`${output.startsWith("Error") ? "text-red-400" : "text-emerald-400"} whitespace-pre-wrap break-words`}>
                   {output}
                 </pre>
             </div>
