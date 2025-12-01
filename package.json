@@ -6,7 +6,6 @@
     "start": "node backend/src/server.js",
     "build": "npm install --prefix frontend && npm run build --prefix frontend"
   },
-  
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -14,6 +13,6 @@
     "inngest": "^3.22.0",
     "mongoose": "^8.8.0",
     "serverless-http": "^3.2.0",
-    "stream-chat": "^8.40.0"
+    "stream-chat": "^8.60.0"
   }
 }
