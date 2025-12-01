@@ -10,32 +10,32 @@ import {
 } from "@stream-io/video-react-sdk";
 import Editor from "@monaco-editor/react";
 import { executeCode, CODE_SNIPPETS } from "../api/codeExecution";
-import { Loader2, Play, Terminal, Code2, Save, MonitorUp, Lock, Unlock } from "lucide-react";
+import { Loader2, Play, Terminal, Code2, Save, MonitorUp, Lock, Unlock, Volume2, StopCircle } from "lucide-react"; 
 import { useUser } from "@clerk/clerk-react";
-import CryptoJS from "crypto-js"; 
+import CryptoJS from "crypto-js";
 
 export default function MeetingRoom() {
   const { id } = useParams();
   const { user } = useUser();
   const navigate = useNavigate();
   
-  // Code State
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState(CODE_SNIPPETS["javascript"]);
   const [output, setOutput] = useState("// Output will appear here...");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
+  
   // Security State
   const [encryptionKey, setEncryptionKey] = useState(""); 
   const [showKeyInput, setShowKeyInput] = useState(false);
 
-  // Stream Logic
+  // Audio State
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
   const client = useStreamVideoClient();
   const [call, setCall] = useState(null);
   const isRemoteUpdate = useRef(false);
 
-  // --- 1. Join Call ---
   useEffect(() => {
     if (!client || !user) return;
     const myCall = client.call("default", id);
@@ -46,7 +46,7 @@ export default function MeetingRoom() {
     };
   }, [client, id, user]);
 
-  // --- 2. Encryption Helpers ---
+  // Encryption Helpers
   const encrypt = (text) => {
     if (!encryptionKey) return text;
     return CryptoJS.AES.encrypt(text, encryptionKey).toString();
@@ -62,16 +62,43 @@ export default function MeetingRoom() {
     }
   };
 
-  // --- 3. Real-Time Sync ---
+  // --- NEW: TEXT TO SPEECH FUNCTION ---
+  const speakCode = () => {
+    if (!('speechSynthesis' in window)) {
+      alert("Your browser does not support text-to-speech.");
+      return;
+    }
+    
+    // Stop any current speaking
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(code);
+    utterance.rate = 0.9; // Slightly slower for code clarity
+    utterance.pitch = 1;
+    
+    // Select a voice (Preferably Google or Microsoft English)
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(voice => voice.lang.includes('en') && voice.name.includes('Google')) || voices[0];
+    if (preferredVoice) utterance.voice = preferredVoice;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+  };
+
+  // Real-Time Sync
   useEffect(() => {
     if (!call) return;
-
     const unsubscribe = call.on("custom", (event) => {
       if (event.type === "code_update") {
         const incomingCode = event.custom.code;
         const newLang = event.custom.language;
-
-        // Decrypt incoming code
         const decryptedCode = encryptionKey ? decrypt(incomingCode) : incomingCode;
 
         if (decryptedCode !== code) {
@@ -81,24 +108,16 @@ export default function MeetingRoom() {
         }
       }
     });
-
     return () => unsubscribe();
   }, [call, code, encryptionKey]);
 
-  // --- 4. Broadcast Changes ---
   const handleCodeChange = (value) => {
     setCode(value);
-
     if (!isRemoteUpdate.current && call) {
-      // Encrypt outgoing code
       const payload = encryptionKey ? encrypt(value) : value;
-      
       call.sendCustomEvent({
         type: "code_update",
-        custom: {
-          code: payload,
-          language: language
-        },
+        custom: { code: payload, language: language },
       });
     }
     isRemoteUpdate.current = false; 
@@ -109,14 +128,10 @@ export default function MeetingRoom() {
     setLanguage(newLang);
     const newCode = CODE_SNIPPETS[newLang];
     setCode(newCode);
-
     if (call) {
       call.sendCustomEvent({
         type: "code_update",
-        custom: {
-          code: encryptionKey ? encrypt(newCode) : newCode,
-          language: newLang
-        },
+        custom: { code: encryptionKey ? encrypt(newCode) : newCode, language: newLang },
       });
     }
   };
@@ -125,7 +140,7 @@ export default function MeetingRoom() {
     setIsLoading(true);
     try {
       const result = await executeCode(language, code);
-      setOutput(result.run.output || result.message || "Success (No output)");
+      setOutput(result.run.output || result.message || "Execution success (No output)");
     } catch (error) {
       setOutput("Error: " + error.message);
     } finally {
@@ -143,7 +158,7 @@ export default function MeetingRoom() {
         body: JSON.stringify({
           userId: user.id,
           language: language,
-          code: code, // Saves the current view (decrypted if unlocked)
+          code: code,
           title: `Interview - ${new Date().toLocaleString()}`
         }),
       });
@@ -163,7 +178,6 @@ export default function MeetingRoom() {
       <StreamCall call={call}>
         <div className="h-screen w-full bg-gray-950 flex flex-col md:flex-row overflow-hidden">
           
-          {/* VIDEO PANEL */}
           <div className="flex-1 flex flex-col relative border-r border-gray-800 min-h-[300px] md:min-h-auto">
               <div className="flex-1 bg-gray-900 relative">
                   <SpeakerLayout participantsBarPosition="bottom" />
@@ -176,7 +190,6 @@ export default function MeetingRoom() {
               </div>
           </div>
 
-          {/* EDITOR PANEL */}
           <div className="flex-1 flex flex-col bg-gray-900 h-full">
             <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 md:px-6 shadow-md">
               <div className="flex items-center gap-3">
@@ -187,7 +200,6 @@ export default function MeetingRoom() {
                   </select>
               </div>
 
-              {/* SECURITY & ACTIONS */}
               <div className="flex gap-2 items-center">
                 {showKeyInput && (
                   <input 
@@ -198,8 +210,19 @@ export default function MeetingRoom() {
                     className="bg-gray-900 text-white text-xs px-2 py-2 rounded border border-emerald-500/50 outline-none w-24"
                   />
                 )}
+                
+                {/* 🔒 Encryption Button */}
                 <button onClick={() => setShowKeyInput(!showKeyInput)} className={`p-2 rounded-lg transition-all ${encryptionKey ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-700 text-gray-400 hover:text-white"}`} title="Encryption">
                   {encryptionKey ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                </button>
+
+                {/* 🔊 Speak Code Button */}
+                <button 
+                  onClick={isSpeaking ? stopSpeaking : speakCode} 
+                  className={`p-2 rounded-lg transition-all ${isSpeaking ? "bg-red-500/20 text-red-400" : "bg-gray-700 text-gray-400 hover:text-white"}`} 
+                  title={isSpeaking ? "Stop Reading" : "Read Code Aloud"}
+                >
+                  {isSpeaking ? <StopCircle className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                 </button>
 
                 <button onClick={saveInterview} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-white transition-all border border-gray-600">
