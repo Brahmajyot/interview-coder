@@ -1,20 +1,33 @@
-import mongoose from "mongoose"
+import mongoose from "mongoose";
+import { ENV } from "./env";
 
+// Try both common variable names
+const MONGODB_URL = ENV.MONGODB_URL || ENV.DB_URL;
 
-import { ENV } from "./env.js";
-
-export const connectDB = async() => {
-    try{
-        if (!ENV.DB_URL) {
-  throw new Error("DB_URI environment variable is required");
+if (!MONGODB_URL) {
+  throw new Error("❌ MongoDB URL missing! Add MONGODB_URI to Vercel Env Vars.");
 }
-        const conn = await mongoose.connect(ENV.DB_URL)
-        console.log("sucessfully connected with db",conn.connection.host)
-    
-    }
-    catch(error)
-    {
-    console.log("connection is not done try again !!" , error)
-    process.exit(1)
-    }
+
+let isConnected = false; // Track connection status
+
+export const connectDB = async () => {
+  mongoose.set("strictQuery", true);
+
+  if (isConnected) {
+    console.log("Using existing MongoDB connection");
+    return;
+  }
+
+  try {
+    await mongoose.connect(MONGODB_URL, {
+      dbName: "interview-db", // Ensure this matches your desired DB name
+      bufferCommands: false,  // Disable buffering for serverless
+    });
+
+    isConnected = true;
+    console.log("✅ MongoDB Connected");
+  } catch (error) {
+    console.error("❌ MongoDB Connection Error:", error);
+    throw error; // Crash the function so Inngest knows to retry
+  }
 };
