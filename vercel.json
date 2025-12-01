@@ -2,11 +2,15 @@
   "rewrites": [
     {
       "source": "/api/inngest",
-      "destination": "/api/inngest"
+      "destination": "/api/inngest.js"
+    },
+    {
+      "source": "/api/token", 
+      "destination": "/api/token.js"
     },
     {
       "source": "/api/(.*)",
-      "destination": "/api/index"
+      "destination": "/api/index.js"
     },
     {
       "source": "/(.*)",
