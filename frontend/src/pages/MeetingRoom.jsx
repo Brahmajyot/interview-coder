@@ -1,68 +1,104 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom"; 
+import { useParams, useNavigate } from "react-router-dom";
 import {
   CallControls,
   CallingState,
   SpeakerLayout,
-  useCallStateHooks,
   useStreamVideoClient,
   StreamTheme,
   StreamCall,
 } from "@stream-io/video-react-sdk";
 import Editor from "@monaco-editor/react";
 import { executeCode, CODE_SNIPPETS } from "../api/codeExecution";
-import { Loader2, Play, Terminal, Code2, Save, MonitorUp } from "lucide-react"; // Added MonitorUp
+import { Loader2, Play, Terminal, Code2, Save, MonitorUp, Lock, Unlock } from "lucide-react";
 import { useUser } from "@clerk/clerk-react";
+import CryptoJS from "crypto-js"; 
 
 export default function MeetingRoom() {
   const { id } = useParams();
   const { user } = useUser();
-  const navigate = useNavigate(); // For leaving the call
+  const navigate = useNavigate();
   
+  // Code State
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState(CODE_SNIPPETS["javascript"]);
   const [output, setOutput] = useState("// Output will appear here...");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Security State
+  const [encryptionKey, setEncryptionKey] = useState(""); 
+  const [showKeyInput, setShowKeyInput] = useState(false);
+
+  // Stream Logic
   const client = useStreamVideoClient();
   const [call, setCall] = useState(null);
   const isRemoteUpdate = useRef(false);
 
+  // --- 1. Join Call ---
   useEffect(() => {
     if (!client || !user) return;
-    
     const myCall = client.call("default", id);
     myCall.join({ create: true }).then(() => setCall(myCall));
-
     return () => {
       myCall.leave();
       setCall(null);
     };
   }, [client, id, user]);
 
+  // --- 2. Encryption Helpers ---
+  const encrypt = (text) => {
+    if (!encryptionKey) return text;
+    return CryptoJS.AES.encrypt(text, encryptionKey).toString();
+  };
+
+  const decrypt = (cipherText) => {
+    if (!encryptionKey) return cipherText;
+    try {
+      const bytes = CryptoJS.AES.decrypt(cipherText, encryptionKey);
+      return bytes.toString(CryptoJS.enc.Utf8) || "// 🔒 WRONG KEY";
+    } catch (e) {
+      return "// 🔒 ENCRYPTED CONTENT";
+    }
+  };
+
+  // --- 3. Real-Time Sync ---
   useEffect(() => {
     if (!call) return;
+
     const unsubscribe = call.on("custom", (event) => {
       if (event.type === "code_update") {
-        const newCode = event.custom.code;
+        const incomingCode = event.custom.code;
         const newLang = event.custom.language;
-        if (newCode !== code) {
+
+        // Decrypt incoming code
+        const decryptedCode = encryptionKey ? decrypt(incomingCode) : incomingCode;
+
+        if (decryptedCode !== code) {
           isRemoteUpdate.current = true; 
-          setCode(newCode);
+          setCode(decryptedCode);
           if (newLang) setLanguage(newLang);
         }
       }
     });
-    return () => unsubscribe();
-  }, [call, code]);
 
+    return () => unsubscribe();
+  }, [call, code, encryptionKey]);
+
+  // --- 4. Broadcast Changes ---
   const handleCodeChange = (value) => {
     setCode(value);
+
     if (!isRemoteUpdate.current && call) {
+      // Encrypt outgoing code
+      const payload = encryptionKey ? encrypt(value) : value;
+      
       call.sendCustomEvent({
         type: "code_update",
-        custom: { code: value, language: language },
+        custom: {
+          code: payload,
+          language: language
+        },
       });
     }
     isRemoteUpdate.current = false; 
@@ -73,10 +109,14 @@ export default function MeetingRoom() {
     setLanguage(newLang);
     const newCode = CODE_SNIPPETS[newLang];
     setCode(newCode);
+
     if (call) {
       call.sendCustomEvent({
         type: "code_update",
-        custom: { code: newCode, language: newLang },
+        custom: {
+          code: encryptionKey ? encrypt(newCode) : newCode,
+          language: newLang
+        },
       });
     }
   };
@@ -85,7 +125,7 @@ export default function MeetingRoom() {
     setIsLoading(true);
     try {
       const result = await executeCode(language, code);
-      setOutput(result.run.output || result.message || "Execution success (No output)");
+      setOutput(result.run.output || result.message || "Success (No output)");
     } catch (error) {
       setOutput("Error: " + error.message);
     } finally {
@@ -103,83 +143,77 @@ export default function MeetingRoom() {
         body: JSON.stringify({
           userId: user.id,
           language: language,
-          code: code,
+          code: code, // Saves the current view (decrypted if unlocked)
           title: `Interview - ${new Date().toLocaleString()}`
         }),
       });
-      if (response.ok) alert("✅ Code saved!");
-      else alert("❌ Failed to save.");
+      if (response.ok) alert("✅ Saved!");
+      else alert("❌ Save failed.");
     } catch (error) {
-      console.error(error);
-      alert("❌ Error saving code.");
+      alert("❌ Error saving.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (!call) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-950 text-white">
-        <Loader2 className="animate-spin h-10 w-10 text-emerald-500" />
-        <span className="ml-3 text-xl font-semibold">Joining Meeting...</span>
-      </div>
-    );
-  }
+  if (!call) return <div className="h-screen flex items-center justify-center bg-gray-950 text-white"><Loader2 className="animate-spin" /></div>;
 
   return (
     <StreamTheme>
       <StreamCall call={call}>
         <div className="h-screen w-full bg-gray-950 flex flex-col md:flex-row overflow-hidden">
           
-          {/* --- LEFT SIDE: VIDEO CALL --- */}
+          {/* VIDEO PANEL */}
           <div className="flex-1 flex flex-col relative border-r border-gray-800 min-h-[300px] md:min-h-auto">
               <div className="flex-1 bg-gray-900 relative">
                   <SpeakerLayout participantsBarPosition="bottom" />
               </div>
-              
-              {/* Custom Video Controls Bar */}
               <div className="bg-gray-950 p-4 flex items-center justify-center gap-4 border-t border-gray-800">
-                  
-                  {/* The Default Controls (Mic, Cam, Leave) */}
                   <CallControls onLeave={() => navigate('/')} />
-
-                  {/* Your Custom Screen Share Button */}
-                  <button 
-                    onClick={() => call.screenShare.toggle()}
-                    className="p-3 rounded-full bg-gray-800 hover:bg-gray-700 text-white transition-colors"
-                    title="Share Screen"
-                  >
+                  <button onClick={() => call.screenShare.toggle()} className="p-3 rounded-full bg-gray-800 hover:bg-gray-700 text-white transition-colors" title="Share Screen">
                     <MonitorUp className="h-5 w-5" />
                   </button>
-
               </div>
           </div>
 
-          {/* --- RIGHT SIDE: CODE EDITOR --- */}
+          {/* EDITOR PANEL */}
           <div className="flex-1 flex flex-col bg-gray-900 h-full">
             <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 md:px-6 shadow-md">
               <div className="flex items-center gap-3">
                   <Code2 className="h-5 w-5 text-emerald-500" />
-                  <select
-                  value={language}
-                  onChange={handleLanguageChange}
-                  className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded-md outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-600 hover:bg-gray-600 cursor-pointer"
-                  >
-                  <option value="javascript">JavaScript</option>
-                  <option value="python">Python</option>
+                  <select value={language} onChange={handleLanguageChange} className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded-md border border-gray-600 outline-none">
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
                   </select>
               </div>
-              <div className="flex gap-2">
+
+              {/* SECURITY & ACTIONS */}
+              <div className="flex gap-2 items-center">
+                {showKeyInput && (
+                  <input 
+                    type="password" 
+                    placeholder="Secret Key" 
+                    value={encryptionKey}
+                    onChange={(e) => setEncryptionKey(e.target.value)}
+                    className="bg-gray-900 text-white text-xs px-2 py-2 rounded border border-emerald-500/50 outline-none w-24"
+                  />
+                )}
+                <button onClick={() => setShowKeyInput(!showKeyInput)} className={`p-2 rounded-lg transition-all ${encryptionKey ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-700 text-gray-400 hover:text-white"}`} title="Encryption">
+                  {encryptionKey ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                </button>
+
                 <button onClick={saveInterview} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-white transition-all border border-gray-600">
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-gray-300" />}
-                  {isSaving ? "Saving..." : "Save"}
+                  <span className="hidden sm:inline">Save</span>
                 </button>
+
                 <button onClick={runCode} disabled={isLoading} className="flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/20 hover:scale-105 transition-all shadow-lg">
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-                  {isLoading ? "Running..." : "Run"}
+                  <span className="hidden sm:inline">Run</span>
                 </button>
               </div>
             </div>
+
             <div className="grow relative">
               <Editor
                 height="100%"
@@ -187,24 +221,17 @@ export default function MeetingRoom() {
                 language={language}
                 value={code}
                 onChange={handleCodeChange}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  automaticLayout: true,
-                  padding: { top: 16 },
-                  scrollBeyondLastLine: false,
-                }}
+                options={{ minimap: { enabled: false }, fontSize: 14, automaticLayout: true, padding: { top: 16 } }}
               />
             </div>
+
             <div className="h-1/3 min-h-[150px] bg-black border-t border-gray-800 flex flex-col">
               <div className="flex items-center gap-2 px-4 py-2 bg-gray-900 border-b border-gray-800">
                   <Terminal className="h-4 w-4 text-emerald-500" />
-                  <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">Console Output</span>
+                  <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">Console</span>
               </div>
               <div className="flex-1 p-4 overflow-auto font-mono text-sm">
-                  <pre className={`${output.startsWith("Error") ? "text-red-400" : "text-emerald-400"} whitespace-pre-wrap break-words`}>
-                    {output}
-                  </pre>
+                  <pre className={`${output.startsWith("Error") ? "text-red-400" : "text-emerald-400"} whitespace-pre-wrap break-words`}>{output}</pre>
               </div>
             </div>
           </div>
